@@ -97,16 +97,18 @@ static void ps2_isr(void *context, alt_u32 id)
 				//effectue une soustraction si valeur signée
 				if(signX)
 				{
-					//data = (255-data);
+					data = (255-data);
+					if(data>mousePosX)
+					mousePosX=0;
+					else
+
 					mousePosX-=data;
 
 				}
 				else
 				{
-					data = (255-data);
-					if(data<mousePosX)
-						mousePosX=0;
-					else
+
+
 						mousePosX+=data;
 
 				}
