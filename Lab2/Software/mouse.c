@@ -20,7 +20,7 @@
 
 #include "hardware.h"
 #include "mouse.h"
-#include "altera_nios2_qsys_irq.h"
+#include "sys/alt_irq.h"
 #include "altera_up_avalon_ps2.h"
 
 #define MOUSE_Y_MAX 229
