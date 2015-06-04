@@ -97,14 +97,19 @@ static void ps2_isr(void *context, alt_u32 id)
 				//effectue une soustraction si valeur signée
 				if(signX)
 				{
-					if(data>mousePosX)
-						mousePosX=0;
-					else
-						mousePosX-=data;
+					//data = (255-data);
+					mousePosX-=data;
+
 				}
 				else
-					mousePosX+=data;
+				{
+					data = (255-data);
+					if(data<mousePosX)
+						mousePosX=0;
+					else
+						mousePosX+=data;
 
+				}
 				if(mousePosX>MOUSE_X_MAX)
 					mousePosX=MOUSE_X_MAX;
 			}
@@ -118,14 +123,18 @@ static void ps2_isr(void *context, alt_u32 id)
 				//effectue une soustraction si valeur signée
 				if(signY)
 				{
-					if(data>mousePosY)
-							mousePosY=0;
-					else
-							mousePosY-=data;
-				}
-				else
+					data = (255-data);
 					mousePosY+=data;
 
+				}
+				else
+				{
+					if(data>mousePosY)
+						mousePosY=0;
+					else
+						mousePosY-=data;
+
+				}
 				if(mousePosY>MOUSE_Y_MAX)
 							mousePosY=MOUSE_Y_MAX;
 				if(mousePosY<MOUSE_Y_MIN)
