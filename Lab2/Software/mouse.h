@@ -28,3 +28,8 @@ U16 mouseGetX(void);
 
 
 U16 mouseGetY(void);
+
+U8 mouseGetSWL(void);
+
+
+U8 mouseGetSWR(void);

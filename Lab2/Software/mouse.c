@@ -20,15 +20,23 @@
 
 #include "hardware.h"
 #include "mouse.h"
-#include "sys/alt_irq.h"
+#include "altera_nios2_qsys_irq.h"
 #include "altera_up_avalon_ps2.h"
 
 #define MOUSE_Y_MAX 229
 #define MOUSE_Y_MIN 10
 #define MOUSE_X_MAX 319
-#define MOUSE_EVENT      1
-#define MOUSE_NO_EVENT   0
-#define MSG_Q_SIZE			10
+#define MOUSE_EVENT  1
+#define MOUSE_IDLE   0
+#define MSG_Q_SIZE	10
+#define MOUSE_X_SIGN_MASK  0x10
+#define MOUSE_Y_SIGN_MASK  0x20
+#define MOUSE_START_BYTE_MASK 0x08
+
+#define MOUSE_SW_R_MASK  0x01
+#define MOUSE_SW_L_MASK  0x02
+#define MOUSE_SW_R_SIGN_DEL   0
+#define MOUSE_SW_L_SIGN_DEL   1
 typedef struct message_queue {
 	volatile unsigned char messages[MSG_Q_SIZE][3];		//Tableau de messages
 	volatile unsigned char read_addr;					//Addresse de lecture
@@ -41,83 +49,92 @@ typedef struct context {
 	alt_up_ps2_dev *ps2;						//Pointeur vers le port PS/2
 } context_t;
 context_t ps2_context;
+
+
 typedef enum eMouseState
 {
-	START_BYTE,
-	X_BYTE,
-	Y_BYTE
+	START_BYTE_STATE,
+	X_BYTE_STATE,
+	Y_BYTE_STATE
 }tMouseState;
 
-static U8 mouseState=START_BYTE;
+static volatile U8 mouseState=START_BYTE_STATE;
 alt_up_ps2_dev *ps2Inst;
-U8 mouseStatusByte=0;
-U8 mouseXByte=0;
-U8 mouseYByte=0;
 
-U8 mouseLastStatusByte=0;
-U8 mouseLastXByte=0;
-U8 mouseLastYByte=0;
 
-U16 mousePosX;
-U16 mousePosY;
-U8 mouseEvent;
+static volatile S8 signX;
+static volatile S8 signY;
+static volatile U8 swLeftState;
+static volatile U8 swRightState;
+
+static volatile U16 mousePosX;
+static volatile U16 mousePosY;
+static volatile U8  mouseEvent;
 
 static void ps2_isr(void *context, alt_u32 id)
 {
-	context_t *ctxt=context;
-	U8 data;
+	U8 data=0;
 	if(alt_up_ps2_read_data_byte(ps2Inst, &data)==0)
 	{
 		switch(mouseState)
 		{
-
+		//START_STATE
 		default:
-		 if(data&0x08)
+		 if(data&MOUSE_START_BYTE_MASK)
 		 {
-			 mouseStatusByte=data;
-			 mouseState=X_BYTE;
+			 signX=(data&MOUSE_X_SIGN_MASK);
+			 signY=(data&MOUSE_Y_SIGN_MASK);
+			 swLeftState =(data&MOUSE_SW_R_MASK)>>MOUSE_SW_R_SIGN_DEL;
+			 swRightState=(data&MOUSE_SW_L_MASK)>>MOUSE_SW_L_SIGN_DEL;
+			 mouseState=X_BYTE_STATE;
 		 }
 		break;
 
-		case X_BYTE:
-			mouseXByte=data;
+		case X_BYTE_STATE:
+
+			if(data!=0)
+			{
+				//effectue une soustraction si valeur signée
+				if(signX)
+				{
+					if(data>mousePosX)
+						mousePosX=0;
+					else
+						mousePosX-=data;
+				}
+				else
+					mousePosX+=data;
+
+				if(mousePosX>MOUSE_X_MAX)
+					mousePosX=MOUSE_X_MAX;
+			}
+			mouseState=Y_BYTE_STATE;
 		break;
 
-		case Y_BYTE:
-			mouseYByte=data;
+		case Y_BYTE_STATE:
+
+			if(data!=0)
+			{
+				//effectue une soustraction si valeur signée
+				if(signY)
+				{
+					if(data>mousePosY)
+							mousePosY=0;
+					else
+							mousePosY-=data;
+				}
+				else
+					mousePosY+=data;
+
+				if(mousePosY>MOUSE_Y_MAX)
+							mousePosY=MOUSE_Y_MAX;
+				if(mousePosY<MOUSE_Y_MIN)
+							mousePosY=MOUSE_Y_MIN;
+			}
+			mouseEvent=MOUSE_EVENT;
+			mouseState=START_BYTE_STATE;
 		break;
-
-		if(mouseLastStatusByte!=mouseStatusByte)
-		{
-
-			mouseEvent=MOUSE_EVENT;
-			mouseLastStatusByte=mouseStatusByte;
 		}
-		if(mouseLastXByte!=mouseXByte)
-		{
-			mousePosX+=(mouseXByte-mouseLastXByte);
-			if(mousePosX>MOUSE_X_MAX)
-				mousePosX=MOUSE_X_MAX;
-			mouseEvent=MOUSE_EVENT;
-;
-			mouseLastXByte=mouseXByte;
-		}
-
-		if(mouseLastYByte!=mouseYByte)
-		{
-			mousePosY+=(mouseYByte-mouseLastYByte);
-			if(mousePosX>MOUSE_Y_MAX)
-					mousePosX=MOUSE_Y_MAX;
-			if(mousePosX<MOUSE_Y_MIN)
-					mousePosX=MOUSE_Y_MIN;
-			mouseEvent=MOUSE_EVENT;
-			mouseLastYByte=mouseYByte;
-		}
-	}
-
-
-
-
 	}
 
 
@@ -126,13 +143,15 @@ void mouseInit(void)
 {
 	ps2Inst=alt_up_ps2_open_dev(MOUSE_0_NAME);
 	alt_irq_register(MOUSE_0_IRQ_INTERRUPT_CONTROLLER_ID,(void *) (&ps2_context),ps2_isr);
+	alt_up_ps2_enable_read_interrupt(ps2Inst);
 
 }
 
 U8 mouseGetEvent(void)
 {
-	U8 retVal=mouseEvent;
-	mouseEvent=MOUSE_NO_EVENT;
+	U8 retVal;
+	retVal=mouseEvent;
+	mouseEvent=MOUSE_IDLE;
 	return retVal;
 }
 U16 mouseGetX(void)
@@ -143,4 +162,13 @@ U16 mouseGetX(void)
 U16 mouseGetY(void)
 {
 	return mousePosY;
+}
+U8 mouseGetSWL(void)
+{
+	return swLeftState;
+}
+
+U8 mouseGetSWR(void)
+{
+	return swRightState;
 }
