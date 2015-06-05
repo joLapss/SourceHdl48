@@ -37,6 +37,8 @@
 #define MOUSE_SW_L_MASK  0x02
 #define MOUSE_SW_R_SIGN_DEL   0
 #define MOUSE_SW_L_SIGN_DEL   1
+#define MOUSE_ERROR_FLAG "PS2 device not found!"
+#define MOUSE_FLAG "PS2 device found!"
 typedef struct message_queue {
 	volatile unsigned char messages[MSG_Q_SIZE][3];		//Tableau de messages
 	volatile unsigned char read_addr;					//Addresse de lecture
@@ -152,9 +154,15 @@ static void ps2_isr(void *context, alt_u32 id)
 }
 void mouseInit(void)
 {
+	int i;
+
 	ps2Inst=alt_up_ps2_open_dev(MOUSE_0_NAME);
+
 	alt_irq_register(MOUSE_0_IRQ_INTERRUPT_CONTROLLER_ID,(void *) (&ps2_context),ps2_isr);
 	alt_up_ps2_enable_read_interrupt(ps2Inst);
+
+	if(ps2Inst == 0)jUartSendString(MOUSE_ERROR_FLAG);
+	else if(ps2Inst != 0)jUartSendString(MOUSE_FLAG);
 
 }
 

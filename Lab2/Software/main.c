@@ -38,28 +38,21 @@
  */
 int main(void)
 {
-	U16 xValue=0;
-	U16 yValue=0;
+
 	InitDisplay();
 	mouseInit();
 	for(;;)
 	{
 
-		if(mouseGetEvent())
-		{
-			xValue = mouseGetX();
-			yValue = mouseGetY();
-			//UpdateCursorPosition(xValue,yValue);
-			if(mouseGetSWL())DrawPixel(xValue,yValue,WHITE);
-			else if(mouseGetSWR()) CleanDrawZone();
+		NiosDrawApp();
 
-		}
+	}
 
 
 
 
 		//jUartSendVar(1);
 
-	}
+
 return 0;
 }
