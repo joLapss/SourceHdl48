@@ -22,7 +22,7 @@
 
 void mouseInit(void);
 
-U8 mouseGetEvent(void);
+U8 mouseGetNbEvent(void);
 
 U16 mouseGetX(void);
 
@@ -33,3 +33,5 @@ U8 mouseGetSWL(void);
 
 
 U8 mouseGetSWR(void);
+
+void mousePtrOutInc(void);

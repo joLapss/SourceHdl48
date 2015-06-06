@@ -22,6 +22,7 @@
 #include "mouse.h"
 #include "sys/alt_irq.h"
 #include "altera_up_avalon_ps2.h"
+#include "jtagUart.h"
 
 #define MOUSE_Y_MAX 229
 #define MOUSE_Y_MIN 10
@@ -32,6 +33,8 @@
 #define MOUSE_X_SIGN_MASK  0x10
 #define MOUSE_Y_SIGN_MASK  0x20
 #define MOUSE_START_BYTE_MASK 0x08
+
+#define MOUSE_BUFFER_SIZE 30
 
 #define MOUSE_SW_R_MASK  0x01
 #define MOUSE_SW_L_MASK  0x02
@@ -59,6 +62,15 @@ typedef enum eMouseState
 	X_BYTE_STATE,
 	Y_BYTE_STATE
 }tMouseState;
+
+//DECLARATIONS DES VARIABLES POUR LES FIFO
+U8  yPosBuffer[MOUSE_BUFFER_SIZE];
+U16 xPosBuffer[MOUSE_BUFFER_SIZE];
+U8  swLeft[MOUSE_BUFFER_SIZE];
+U8  swRight[MOUSE_BUFFER_SIZE];
+U8  ptrIn=0;
+U8  ptrOut=0;
+U8  nbBytes=0;
 
 static volatile U8 mouseState=START_BYTE_STATE;
 alt_up_ps2_dev *ps2Inst;
@@ -109,10 +121,7 @@ static void ps2_isr(void *context, alt_u32 id)
 				}
 				else
 				{
-
-
-						mousePosX+=data;
-
+					mousePosX+=data;
 				}
 				if(mousePosX>MOUSE_X_MAX)
 					mousePosX=MOUSE_X_MAX;
@@ -145,6 +154,17 @@ static void ps2_isr(void *context, alt_u32 id)
 							mousePosY=MOUSE_Y_MIN;
 			}
 			mouseEvent=MOUSE_EVENT;
+			//Place les données dans des FIFO
+			yPosBuffer[ptrIn]=mousePosY;
+			xPosBuffer[ptrIn]=mousePosX;
+			swLeft[ptrIn]=swLeftState;
+			swRight[ptrIn]=swRightState;
+			ptrIn++;
+			nbBytes++;
+
+			if(ptrIn>MOUSE_BUFFER_SIZE)
+				ptrIn=0;
+
 			mouseState=START_BYTE_STATE;
 		break;
 		}
@@ -154,7 +174,6 @@ static void ps2_isr(void *context, alt_u32 id)
 }
 void mouseInit(void)
 {
-	int i;
 
 	ps2Inst=alt_up_ps2_open_dev(MOUSE_0_NAME);
 
@@ -166,28 +185,32 @@ void mouseInit(void)
 
 }
 
-U8 mouseGetEvent(void)
+U8 mouseGetNbEvent(void)
 {
-	U8 retVal;
-	retVal=mouseEvent;
-	mouseEvent=MOUSE_IDLE;
-	return retVal;
+	return nbBytes;
+}
+void mousePtrOutInc(void)
+{
+	ptrOut++;
+	nbBytes--;
+	if(ptrOut>MOUSE_BUFFER_SIZE)
+		ptrOut=0;
 }
 U16 mouseGetX(void)
 {
-	return mousePosX;
+	return xPosBuffer[ptrOut];
 }
 
 U16 mouseGetY(void)
 {
-	return mousePosY;
+	return (U16)yPosBuffer[ptrOut];
 }
 U8 mouseGetSWL(void)
 {
-	return swLeftState;
+	return swLeft[ptrOut];
 }
 
 U8 mouseGetSWR(void)
 {
-	return swRightState;
+	return swRight[ptrOut];
 }
