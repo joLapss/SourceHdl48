@@ -34,12 +34,12 @@
 #define MOUSE_Y_SIGN_MASK  0x20
 #define MOUSE_START_BYTE_MASK 0x08
 
-#define MOUSE_BUFFER_SIZE 30
+#define MOUSE_BUFFER_SIZE 300
 
-#define MOUSE_SW_R_MASK  0x01
-#define MOUSE_SW_L_MASK  0x02
-#define MOUSE_SW_R_SIGN_DEL   0
-#define MOUSE_SW_L_SIGN_DEL   1
+#define MOUSE_SW_L_MASK  0x01
+#define MOUSE_SW_R_MASK  0x02
+#define MOUSE_SW_L_SIGN_DEL   0
+#define MOUSE_SW_R_SIGN_DEL   1
 #define MOUSE_ERROR_FLAG "PS2 device not found!"
 #define MOUSE_FLAG "PS2 device found!"
 typedef struct message_queue {
@@ -68,9 +68,12 @@ U8  yPosBuffer[MOUSE_BUFFER_SIZE];
 U16 xPosBuffer[MOUSE_BUFFER_SIZE];
 U8  swLeft[MOUSE_BUFFER_SIZE];
 U8  swRight[MOUSE_BUFFER_SIZE];
-U8  ptrIn=0;
-U8  ptrOut=0;
-U8  nbBytes=0;
+U16  ptrIn=0;
+U16 ptrOut=0;
+U16  nbBytes=0;
+U8 lastSwitchRight=0;
+U8 writeTobuffer=1;
+
 
 static volatile U8 mouseState=START_BYTE_STATE;
 alt_up_ps2_dev *ps2Inst;
@@ -88,7 +91,7 @@ static volatile U8  mouseEvent;
 static void ps2_isr(void *context, alt_u32 id)
 {
 	U8 data=0;
-	if(alt_up_ps2_read_data_byte(ps2Inst, &data)==0)
+	if(alt_up_ps2_read_data_byte(ps2Inst, &data)==0 && nbBytes<MOUSE_BUFFER_SIZE)
 	{
 		switch(mouseState)
 		{
@@ -98,9 +101,19 @@ static void ps2_isr(void *context, alt_u32 id)
 		 {
 			 signX=(data&MOUSE_X_SIGN_MASK);
 			 signY=(data&MOUSE_Y_SIGN_MASK);
-			 swLeftState =(data&MOUSE_SW_R_MASK)>>MOUSE_SW_R_SIGN_DEL;
-			 swRightState=(data&MOUSE_SW_L_MASK)>>MOUSE_SW_L_SIGN_DEL;
+			 swRightState =(data&MOUSE_SW_R_MASK)>>MOUSE_SW_R_SIGN_DEL;
+			 swLeftState=(data&MOUSE_SW_L_MASK)>>MOUSE_SW_L_SIGN_DEL;
+			 if((lastSwitchRight==swRightState)&&(swRightState==MOUSE_SW_R_MASK))
+			 {
+				 writeTobuffer=0;
+
+			 }
+			 else
+			 {
+				 writeTobuffer=1;
+			 }
 			 mouseState=X_BYTE_STATE;
+			 lastSwitchRight=swRightState;
 		 }
 		break;
 
@@ -155,15 +168,18 @@ static void ps2_isr(void *context, alt_u32 id)
 			}
 			mouseEvent=MOUSE_EVENT;
 			//Place les données dans des FIFO
-			yPosBuffer[ptrIn]=mousePosY;
-			xPosBuffer[ptrIn]=mousePosX;
-			swLeft[ptrIn]=swLeftState;
-			swRight[ptrIn]=swRightState;
-			ptrIn++;
-			nbBytes++;
+			if(writeTobuffer)
+			{
+				yPosBuffer[ptrIn]=mousePosY;
+				xPosBuffer[ptrIn]=mousePosX;
+				swLeft[ptrIn]=swLeftState;
+				swRight[ptrIn]=swRightState;
+				ptrIn++;
+				nbBytes++;
 
-			if(ptrIn>MOUSE_BUFFER_SIZE)
-				ptrIn=0;
+				if(ptrIn>MOUSE_BUFFER_SIZE-1)
+					ptrIn=0;
+			}
 
 			mouseState=START_BYTE_STATE;
 		break;
@@ -193,7 +209,7 @@ void mousePtrOutInc(void)
 {
 	ptrOut++;
 	nbBytes--;
-	if(ptrOut>MOUSE_BUFFER_SIZE)
+	if(ptrOut>MOUSE_BUFFER_SIZE-1)
 		ptrOut=0;
 }
 U16 mouseGetX(void)
