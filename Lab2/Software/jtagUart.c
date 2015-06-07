@@ -5,9 +5,9 @@
  		Kevin Parent Legault
 		Jonathan Lapointe
  Create Date:    2015-05-17
- Design Name: Lab1
+ Design Name: Lab2
  Module Name: jtagUart
- Project Name: Lab1
+ Project Name: Lab2
  Target Devices: Altera Cyclone V SOPC
  Tool versions: NIOSII V14.2
  Description:

@@ -31,7 +31,7 @@
 
 
 
-
+//Pointeur périphérique pixel buffer eyt char buffer
 alt_up_pixel_buffer_dma_dev* pixelptr;
 alt_up_char_buffer_dev* charbuff;
 

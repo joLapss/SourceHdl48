@@ -47,12 +47,5 @@ int main(void)
 		NiosDrawApp();
 
 	}
-
-
-
-
-		//jUartSendVar(1);
-
-
 return 0;
 }
