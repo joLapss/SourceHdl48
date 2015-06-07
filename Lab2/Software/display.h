@@ -35,20 +35,30 @@
 alt_up_pixel_buffer_dma_dev* pixelptr;
 alt_up_char_buffer_dev* charbuff;
 
+// Variables globales
 U16 xLastValue;
 U16 yLastValue;
+
+
 /*
- * @fn 	 écrire fonction
- * @des  écrire description
- * @arg  écrire les arguments
- * @ret  écrire le retour de fonction
+ * @fn 	 void InitDisplay(void)
+ * @des  Ouvre les périphérique pixel buffer et char buffer
+ * @arg  N'a besoin d'aucun argument
+ * @ret  Retourne rien.
  */
 void InitDisplay(void);
+
 /*
- * @fn 	 écrire fonction
- * @des  écrire description
- * @arg  écrire les arguments
- * @ret  écrire le retour de fonction
+ * @fn 	 void NiosDrawApp(void)
+ * @des  Exécute l'application NiosDrawv0.1.
+ * 											- Clique gauche: Active le tracé de couleur (Rouge,Bleu,Jaune et Vert).
+ * 											- Clique droite: Efface la zone de dessin
+ * 											- Le fond d'écran est modifiable par le define: BACKGROUND (choix entre : Rouge,Bleu,Jaune et Vert).
+ * 											- Cycle de rafraichissement de l'écran à 60 cycles par seconde.
+ * 											- Envoie de la télémétrie sur le port Jtag. (Clique gauche, clique droit, coordonées x-y lors du clique)
+ *
+ * @arg  Ne prend aucun argument
+ * @ret  Ne retourne pas de valeur
  */
 void NiosDrawApp(void);
 

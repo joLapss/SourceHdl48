@@ -9,7 +9,7 @@
  Project Name: lab2n
  Target Devices: Altera cyclone V SOPC
  Tool versions: NIOS II v14.1
- Description:
+ Description: Programme principale appelant l'application NiosDrawv0.1
 	
 
  Revision: v1
@@ -31,20 +31,20 @@
 
 
 /*
- * @fn 	 écrire fonction
- * @des  écrire description
- * @arg  écrire les arguments
- * @ret  écrire le retour de fonction
+ * @fn 	 int main(void)
+ * @des  Programme principale
+ * @arg  void
+ * @ret retourne 0 
  */
 int main(void)
 {
-
+//Init des périphériques
 	InitDisplay();
 	mouseInit();
 	for(;;)
 	{
 
-		NiosDrawApp();
+		NiosDrawApp(); // Exécute l'app niosdraw.
 
 	}
 return 0;
