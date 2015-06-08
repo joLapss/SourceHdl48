@@ -42,12 +42,14 @@
 #define MOUSE_SW_R_SIGN_DEL   1
 #define MOUSE_ERROR_FLAG "PS2 device not found!"
 #define MOUSE_FLAG "PS2 device found!"
+//type Variable contexte non utilisée
 typedef struct message_queue {
 	volatile unsigned char messages[MSG_Q_SIZE][3];		//Tableau de messages
 	volatile unsigned char read_addr;					//Addresse de lecture
 	volatile unsigned char write_addr;					//Addresse d'ecriture
 }message_queue_t;
 //Declaration de la structure du contenant de variables de contexte
+//type Variable contexte non utilisée
 typedef struct context {
 	volatile unsigned char reset_flag, ready;	//Drapeaux de statut du PS/2
 	message_queue_t *message_q;					//Pointeur vers le tableau de message
@@ -55,7 +57,7 @@ typedef struct context {
 } context_t;
 context_t ps2_context;
 
-
+//états de lectures des données envoyé par la souris
 typedef enum eMouseState
 {
 	START_BYTE_STATE,
@@ -64,31 +66,43 @@ typedef enum eMouseState
 }tMouseState;
 
 //DECLARATIONS DES VARIABLES POUR LES FIFO
+//FIFOs de position
 U8  yPosBuffer[MOUSE_BUFFER_SIZE];
 U16 xPosBuffer[MOUSE_BUFFER_SIZE];
+//FIFOS d'états des boutons 
 U8  swLeft[MOUSE_BUFFER_SIZE];
 U8  swRight[MOUSE_BUFFER_SIZE];
+//pointeurs in et out 
 U16  ptrIn=0;
 U16 ptrOut=0;
+
 U16  nbBytes=0;
+//
 U8 lastSwitchRight=0;
+//fanion d'écriture aux fifo
 U8 writeTobuffer=1;
 
-
+//variables machine a état
 static volatile U8 mouseState=START_BYTE_STATE;
 alt_up_ps2_dev *ps2Inst;
 
-
+//variables lecture des valeurs souris
 static volatile S8 signX;
 static volatile S8 signY;
 static volatile U8 swLeftState;
 static volatile U8 swRightState;
 
+//compteur de position x et y
 static volatile U16 mousePosX;
 static volatile U16 mousePosY;
-static volatile U8  mouseEvent;
 
-static void ps2_isr(void *context, alt_u32 id)
+/*
+ * @fn 	 static void ps2_isr(void *context, alt_u32 id)
+ * @des  routine d'interruption reception données souris
+ * @arg  *context non utilisé, U32 id
+ * @ret  Retourne rien.
+ */
+static void ps2_isr(void *context, U32 id)
 {
 	U8 data=0;
 	if(alt_up_ps2_read_data_byte(ps2Inst, &data)==0 && nbBytes<MOUSE_BUFFER_SIZE)
@@ -188,6 +202,12 @@ static void ps2_isr(void *context, alt_u32 id)
 
 
 }
+/*
+ * @fn 	 void mouseInit(void)
+ * @des  init de la souris et des interruption souris
+ * @arg  void
+ * @ret  Retourne rien.
+ */
 void mouseInit(void)
 {
 
@@ -200,11 +220,23 @@ void mouseInit(void)
 	else if(ps2Inst != 0)jUartSendString(MOUSE_FLAG);
 
 }
-
+/*
+ * @fn 	 U8 mouseGetNbEvent(void)
+ * @des  retourne le nb de trames disponibles
+ * @arg  void
+ * @ret  U8 nBEvent.
+ */
 U8 mouseGetNbEvent(void)
 {
 	return nbBytes;
 }
+/*
+ * @fn 	 void mousePtrOutInc(void)
+ * @des  incremente le ptr de sortie du fifo
+		 décrémente le nb de trames disponibles
+		 doit etre appeler apres avoir récupéré
+		 toutes les données souris 
+ */
 void mousePtrOutInc(void)
 {
 	ptrOut++;
@@ -212,20 +244,34 @@ void mousePtrOutInc(void)
 	if(ptrOut>MOUSE_BUFFER_SIZE-1)
 		ptrOut=0;
 }
+/*
+ * @fn 	 U16 mouseGetX(void)
+ * @des  retourne la donnée de position X		 
+ */
 U16 mouseGetX(void)
 {
 	return xPosBuffer[ptrOut];
 }
-
+/*
+ * @fn 	 U16 mouseGetY(void)
+ * @des  retourne la donnée de position Y		 
+ */
 U16 mouseGetY(void)
 {
 	return (U16)yPosBuffer[ptrOut];
 }
+/*
+ * @fn 	 U8 mouseGetSWL(void)
+ * @des  retourne la donnée de bouton gauche		 
+ */
 U8 mouseGetSWL(void)
 {
 	return swLeft[ptrOut];
 }
-
+/*
+ * @fn 	 U8 mouseGetSWR(void)
+ * @des  retourne la donnée de bouton droit		 
+ */
 U8 mouseGetSWR(void)
 {
 	return swRight[ptrOut];
