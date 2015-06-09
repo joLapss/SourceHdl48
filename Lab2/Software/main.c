@@ -31,20 +31,20 @@
 
 
 /*
- * @fn 	 int main(void)
- * @des  Programme principale
- * @arg  void
- * @ret retourne 0 
+ * @fn 	 écrire fonction
+ * @des  écrire description
+ * @arg  écrire les arguments
+ * @ret  écrire le retour de fonction
  */
 int main(void)
 {
-//Init des périphériques
+
 	InitDisplay();
 	mouseInit();
 	for(;;)
 	{
 
-		NiosDrawApp(); // Exécute l'app niosdraw.
+		NiosDrawApp();
 
 	}
 return 0;
