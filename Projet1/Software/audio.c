@@ -12,6 +12,7 @@
 #include "altera_up_avalon_audio_regs.h"
 #include "altera_up_avalon_audio_and_video_config.h"
 #include "altera_up_avalon_audio_and_video_config_regs.h"
+#include "math.h"
 #define AUDIO_SAMPLING_MAX_DATA 3500000
 
 U32 zMax[14];
@@ -26,7 +27,7 @@ U32 audioFreq[14]={262,294,330,349,392,440,494,
 				   523,277,311,370,415,466,554};
 
 // coefficient des harmoniques
-float audioP[32] = {
+double audioP[32] = {
 				0.0284526460403719,
 				0.0381257369591583,
 				0.0382913541784970,
@@ -64,7 +65,6 @@ float audioP[32] = {
 
 void audioInit(void)
 {
-   U16 z;
    audio_dev = alt_up_audio_open_dev (AUDIO_0_NAME);
    audiocfg=alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
 }
@@ -105,7 +105,7 @@ void audioPlaySampling(void)
 {
 	int fifospaceL,fifospaceR;
 	U32 ptrIndexL=0,ptrIndexR=0;
-	while(ptrIndexL<AUDIO_SAMPLING_MAX_DATA||ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
+	while(ptrIndexR<AUDIO_SAMPLING_MAX_DATA||ptrIndexL<AUDIO_SAMPLING_MAX_DATA)
 	{
 
 
@@ -119,7 +119,7 @@ void audioPlaySampling(void)
 			fifospaceR = (IORD_ALT_UP_AUDIO_FIFOSPACE(audio_dev->base)& ALT_UP_AUDIO_FIFOSPACE_WSRC_MSK) >> ALT_UP_AUDIO_FIFOSPACE_WSRC_OFST;
 			if(fifospaceR>100&&ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
 			{
-				alt_up_audio_write_fifo(audio_dev,&audioSamplingLData[ptrIndexR],100, ALT_UP_AUDIO_RIGHT);
+				alt_up_audio_write_fifo(audio_dev,&audioSamplingRData[ptrIndexR],100, ALT_UP_AUDIO_RIGHT);
 				ptrIndexR+=100;
 			}
 	}
@@ -148,7 +148,7 @@ void audioSampling(void)
 	}
 }
 
-#define SINCOEFF (2 * 3.14159265)
+#define SINCOEFF (2.0f * 3.14159265f)
 #define AUDIO_F_SAMPLING 32000
 
 void audioCalculateNotes(U32 Amplitude,U8 nMax)
@@ -166,9 +166,10 @@ void audioCalculateNotes(U32 Amplitude,U8 nMax)
 		for(n=1;n<nMax;n++)
 		{
 			zMaxAngle=AUDIO_F_SAMPLING/(audioFreq[note]*n);
-			angle = (float)(SINCOEFF/zMaxAngle);
+			angle = (float)(SINCOEFF/(float)zMaxAngle);
 			for(z=0;z<zMax[note];z++)
-				audioYout[note][z]=audioYout[note][z]+(unsigned int)((Amplitude*audioP[n]*cos(angle*(float)z)));
+				audioYout[note][z]=audioYout[note][z]+(unsigned int)(((double)Amplitude*audioP[n])*cos(angle*(double)z));
+					//audioYout[note][z]=audioYout[note][z]+(unsigned int)(Amplitude*audioP[n]*cos(angle*(float)z));
 		}
 		for(z=0;z<zMax[note];z++)
 			audioYout[note][z]=audioYout[note][z]&0xFFFFFF00;
