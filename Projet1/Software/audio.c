@@ -12,7 +12,7 @@
 #include "altera_up_avalon_audio_regs.h"
 #include "altera_up_avalon_audio_and_video_config.h"
 #include "altera_up_avalon_audio_and_video_config_regs.h"
-#define AUDIO_SAMPLING_MAX_DATA 35000
+#define AUDIO_SAMPLING_MAX_DATA 3500000
 
 U32 zMax[14];
 unsigned int audioYout[14][256];
@@ -104,35 +104,47 @@ void audioPlayNote(U8 note)
 void audioPlaySampling(void)
 {
 	int fifospaceL,fifospaceR;
-	U32 ptrIndex=0;
-	while(ptrIndex<AUDIO_SAMPLING_MAX_DATA)
+	U32 ptrIndexL=0,ptrIndexR=0;
+	while(ptrIndexL<AUDIO_SAMPLING_MAX_DATA||ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
 	{
-			while((fifospaceR<100)&&(fifospaceL<100))
-			{
-				fifospaceR = (IORD_ALT_UP_AUDIO_FIFOSPACE(audio_dev->base)& ALT_UP_AUDIO_FIFOSPACE_WSRC_MSK) >> ALT_UP_AUDIO_FIFOSPACE_WSRC_OFST;
-				fifospaceL = (IORD_ALT_UP_AUDIO_FIFOSPACE(audio_dev->base)& ALT_UP_AUDIO_FIFOSPACE_WSLC_MSK) >> ALT_UP_AUDIO_FIFOSPACE_WSLC_OFST;
-			}
 
-			alt_up_audio_write_fifo(audio_dev,&audioSamplingLData[ptrIndex],100, ALT_UP_AUDIO_LEFT);
-			alt_up_audio_write_fifo(audio_dev,&audioSamplingRData[ptrIndex],100, ALT_UP_AUDIO_RIGHT);
-			ptrIndex+=100;
+
+			fifospaceL = (IORD_ALT_UP_AUDIO_FIFOSPACE(audio_dev->base)& ALT_UP_AUDIO_FIFOSPACE_WSLC_MSK) >> ALT_UP_AUDIO_FIFOSPACE_WSLC_OFST;
+
+			if(fifospaceL>100&&ptrIndexL<AUDIO_SAMPLING_MAX_DATA)
+			{
+				alt_up_audio_write_fifo(audio_dev,&audioSamplingLData[ptrIndexL],100, ALT_UP_AUDIO_LEFT);
+				ptrIndexL+=100;
+			}
+			fifospaceR = (IORD_ALT_UP_AUDIO_FIFOSPACE(audio_dev->base)& ALT_UP_AUDIO_FIFOSPACE_WSRC_MSK) >> ALT_UP_AUDIO_FIFOSPACE_WSRC_OFST;
+			if(fifospaceR>100&&ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
+			{
+				alt_up_audio_write_fifo(audio_dev,&audioSamplingLData[ptrIndexR],100, ALT_UP_AUDIO_RIGHT);
+				ptrIndexR+=100;
+			}
 	}
 }
 
 void audioSampling(void)
 {
 	int fifospaceR,fifospaceL;
-	U32 ptrIndex=0;
-	while(ptrIndex<AUDIO_SAMPLING_MAX_DATA)
+	U32 ptrIndexL=0,ptrIndexR=0;
+	while(ptrIndexL<AUDIO_SAMPLING_MAX_DATA||ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
 	{
-		while((fifospaceR<100)&&(fifospaceL<100))
+
+		fifospaceL=alt_up_audio_read_fifo_avail(audio_dev,ALT_UP_AUDIO_LEFT);
+		if(fifospaceL>100&&ptrIndexL<AUDIO_SAMPLING_MAX_DATA)
 		{
-			fifospaceL=alt_up_audio_read_fifo_avail(audio_dev,ALT_UP_AUDIO_LEFT);
-			fifospaceR=alt_up_audio_read_fifo_avail(audio_dev,ALT_UP_AUDIO_RIGHT);
+			alt_up_audio_read_fifo(audio_dev,&audioSamplingLData[ptrIndexL],100, ALT_UP_AUDIO_LEFT);
+			ptrIndexL+=100;
 		}
-		alt_up_audio_read_fifo(audio_dev,&audioSamplingLData[ptrIndex],100, ALT_UP_AUDIO_LEFT);
-		alt_up_audio_read_fifo(audio_dev,&audioSamplingRData[ptrIndex],100, ALT_UP_AUDIO_RIGHT);
-		ptrIndex+=100;
+		fifospaceR=alt_up_audio_read_fifo_avail(audio_dev,ALT_UP_AUDIO_RIGHT);
+		if(fifospaceR>100&&ptrIndexR<AUDIO_SAMPLING_MAX_DATA)
+		{
+			alt_up_audio_read_fifo(audio_dev,&audioSamplingRData[ptrIndexR],100, ALT_UP_AUDIO_RIGHT);
+			ptrIndexR+=100;
+		}
+
 	}
 }
 
@@ -156,7 +168,7 @@ void audioCalculateNotes(U32 Amplitude,U8 nMax)
 			zMaxAngle=AUDIO_F_SAMPLING/(audioFreq[note]*n);
 			angle = (float)(SINCOEFF/zMaxAngle);
 			for(z=0;z<zMax[note];z++)
-				audioYout[note][z]=audioYout[note][z]+(unsigned int)((Amplitude*audioP[n+2]*cos(angle*(float)z)));
+				audioYout[note][z]=audioYout[note][z]+(unsigned int)((Amplitude*audioP[n]*cos(angle*(float)z)));
 		}
 		for(z=0;z<zMax[note];z++)
 			audioYout[note][z]=audioYout[note][z]&0xFFFFFF00;
