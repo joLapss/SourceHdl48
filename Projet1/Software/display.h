@@ -23,21 +23,28 @@
 
 #include "hardware.h"
 #include "jtagUart.h"
-#include "mouse.h"
 #include "altera_up_avalon_video_pixel_buffer_dma.h"
 #include "altera_up_avalon_video_character_buffer_with_dma.h"
 #include "altera_up_avalon_video_character_buffer_with_dma_regs.h"
 #include "system.h"
+#include "picture.h"
+#include "keyboard.h"
 
+#define DISABLED 0
+#define ENABLED 1
 
-
+#define WRITE 1
+#define CLEAR 0
 //Pointeur périphérique pixel buffer eyt char buffer
 alt_up_pixel_buffer_dma_dev* pixelptr;
 alt_up_char_buffer_dev* charbuff;
 
+
+//void DrawImage(U8 x,U8 y,U16 height,U16 width);
 // Variables globales
 U16 xLastValue;
 U16 yLastValue;
+
 
 
 /*
@@ -47,7 +54,9 @@ U16 yLastValue;
  * @ret  Retourne rien.
  */
 void InitDisplay(void);
-
+void DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr);
+void PlayNote(U8 note,U8 mode);
+void SelectPianoMode(U8 Data);
 /*
  * @fn 	 void NiosDrawApp(void)
  * @des  Exécute l'application NiosDrawv0.1.
@@ -60,6 +69,6 @@ void InitDisplay(void);
  * @arg  Ne prend aucun argument
  * @ret  Ne retourne pas de valeur
  */
-void NiosDrawApp(void);
+
 
 #endif /* DISPLAY_H_ */
