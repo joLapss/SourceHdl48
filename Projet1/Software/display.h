@@ -54,21 +54,33 @@ U16 yLastValue;
  * @ret  Retourne rien.
  */
 void InitDisplay(void);
-void DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr);
-void PlayNote(U8 note,U8 mode);
-void SelectPianoMode(U8 Data);
 /*
- * @fn 	 void NiosDrawApp(void)
- * @des  Exécute l'application NiosDrawv0.1.
- * 											- Clique gauche: Active le tracé de couleur (Rouge,Bleu,Jaune et Vert).
- * 											- Clique droite: Efface la zone de dessin
- * 											- Le fond d'écran est modifiable par le define: BACKGROUND (choix entre : Rouge,Bleu,Jaune et Vert).
- * 											- Cycle de rafraichissement de l'écran à 60 cycles par seconde.
- * 											- Envoie de la télémétrie sur le port Jtag. (Clique gauche, clique droit, coordonées x-y lors du clique)
- *
- * @arg  Ne prend aucun argument
- * @ret  Ne retourne pas de valeur
+ * @fn 	 DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr)
+ * @des  Dessine une petite image stocker à une adresse spécifique. Scan du de gauche à droite et du haut vers le bas.
+ * @arg  U8 x : Coordonnés en x0 de l'image à afficher.
+ * 		 U8 y : Coordonnés en y0 de l'image à afficher.
+ * 		 U16 height : à déterminer. spécifiez les dimensions de l'image à afficher. Peut être croppé si on le désire
+ * 		 U16 width  : à déterminer. Le positionnement doit être impéccable pour ce paramètre. "sensitive case". Peut déformé l'image ou même les couleurs
+ * 		 U16 *ptr : Pointeur d'adresse pour la lecture du tableau inculant le code rgb pour chaque pixel de l'image.
+ * @ret  Ne retourne aucune donnée.
  */
+void DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr);
+/*
+ * @fn 	 PlayNote(U8 data,U8 mode)
+ * @des  Sélectionne à l'écran la note joué et affiche à l'écran le caractère de la dernière note affiché
+ * @arg  U8 data : data provenant des touches du clavier.
+ * 		 U8 mode : 2 modes soit : write et clear. Write : Dessine la note passé en argument. Clear: Efface la note passé en argument
+ * @ret  Ne retourne aucune donnée.
+ */
+void PlayNote(U8 note,U8 mode);
+/*
+ * @fn 	 void SelectPianoMode(U8 Data)
+ * @des  Inscrit sur le panneau d'affichage si on est en mode enregistrement ou en mode écoute.
+ * @arg  U8 data : Reçoit les touches du clavier et réagit aux modes Enregistrement et Écoute.
+ * @ret  Ne retourne aucune donnée.
+ */
+void SelectPianoMode(U8 Data);
+
 
 
 #endif /* DISPLAY_H_ */

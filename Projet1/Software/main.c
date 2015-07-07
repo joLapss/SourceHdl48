@@ -9,7 +9,7 @@
  Project Name: lab2n
  Target Devices: Altera cyclone V SOPC
  Tool versions: NIOS II v14.1
- Description: Programme principale appelant l'application NiosDrawv0.1
+ Description: Programme principale
 	
 
  Revision: v1
@@ -61,7 +61,7 @@ int main(void)
 	while(1)
 	{
 
-
+//Vérifie les évènements du clavier
 		 if(kBGetEvent())
 		 {
 			 sustainValue=10000;
@@ -73,28 +73,28 @@ int main(void)
 				 playFlag=1;
 
 			 if(state == ENABLED)PlayNote(lastNotePlayed,CLEAR);
-			 PlayNote(noteToPlay,WRITE);
-			 SelectPianoMode(mode);
+			 PlayNote(noteToPlay,WRITE); //sélectionne la note à l'écran
+			 SelectPianoMode(mode);//Change le mode à l'écran
 			 lastNotePlayed = noteToPlay;
 			 state=ENABLED;
 
 		 }
 		 if(sustainValue!=0)
 		 {
-			 audioPlayNote(noteToPlay);
+			 audioPlayNote(noteToPlay); //joue la note durant un délai définie par sustainValue
 			 sustainValue--;
 		 }
 		 else
-			 PlayNote(noteToPlay,CLEAR);
+			 PlayNote(noteToPlay,CLEAR); // efface la note à l'écran lorsque le délai est terminer
 		 if(sampleFlag)
 		 {
-			 audioSampling();
+			 audioSampling(); // Démarre l'enregistrement.
 			 SelectPianoMode(1);
 			 sampleFlag=0;
 		 }
 		 else if(playFlag)
 		 {
-			 audioPlaySampling();
+			 audioPlaySampling(); // Joue l'enregistrement.
 			 SelectPianoMode(1);
 			 playFlag=0;
 		 }

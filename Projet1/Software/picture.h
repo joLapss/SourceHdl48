@@ -3,6 +3,7 @@
  *
  *  Created on: 2015-07-05
  *      Author: Kevin
+ *      Description : Librairie d'image sous forme de matrice.
  */
 
 #ifndef PICTURE_H_

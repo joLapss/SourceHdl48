@@ -19,12 +19,14 @@
 	
 	Possède les fonctions suivantes :
 		1. void InitDisplay(void);
-		2. void NiosDrawApp(void);
+		2. U8 *UToS(U32 value,U8 size);
 		3. U8 DrawPixelColored(U16 x,U16 y)
 		4. void CleanDrawZone(void)
-		5. U8 UpdateCursorPosition(U16 x, U16 y)
-		6. void DisplayCoordinate(U16 x, U16 y)
-		7. void SendTelemetry(U16 x, U16 y, U8 FlagR, U8 FlagL)
+		5. void DrawPiano(U16 x, U16 y);
+		6. void InitControlPanel(void);
+		7. void DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr);
+		8. void PlayNote(U8 note,U8 mode);
+		9. void SelectPianoMode(U8 Data);
 
 
  Revision: v1
@@ -66,22 +68,37 @@
 //Definition des coordonnées de positionnement des étiquettes
 #define LABEL_POSITION_WIDTH_TOP 10
 #define LABEL_POSITION_HEIGHT_TOP 1
+
+//Positionnement du panneau de contrôle principale
 #define CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X0 2
 #define CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X1 6
 #define CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0 42
 #define CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1 72
+
 #define LABEL_PIANO_POSITION_INDEX_X0 3
 #define LABEL_PIANO_POSITION_POSITION_Y0 45
+
+//Index pour positionnement des étiquettes
+#define LABEL_OFFSET_TAB_POSITION 1
+#define NUMBER_OF_CHARACTER 3
+
 #define COORDINATE_X_POSITION_WIDTH 58
 #define COORDINATE_X_POSITION_HEIGHT 58
 #define COORDINATE_Y_POSITION_WIDTH 63
 #define COORDINATE_Y_POSITION_HEIGHT 58
 #define X_SHIFT 2
 #define Y_SHIFT 2
+
+//Chaîne de caractères des label du panneau d'affichage du piano
 #define CTRL_LABEL "Synthetiseur audio"
 #define MODE_LABEL "Mode"
 #define NOTE_LABEL "Note joue"
-//Définition d'étiquettes
+#define ERASE_BIGGEST_MODE "              "
+#define RECORDING_MODE "Enregistrement"
+#define PLAY_MODE "Ecoute"
+#define KEYBOARD_MODE "Clavier"
+
+//Définition des étiquettes principaux
 #define X "X:"
 #define Y "Y:"
 #define LABEL "Audio_Synthesizer V0.1 - Kevin Parent Legault & Jonathan Lapointe"
@@ -94,14 +111,16 @@
 #define PIANO_POSITION_X 35
 #define PIANO_POSITION_Y 100
 
-//Select format
+//dimension des zones pour la sélection des touches
 #define BOX1_WHITE_NOTE_WIDTH  28
 #define BOX1_WHITE_NOTE_HEIGHT 40
 #define BOX2_WHITE_NOTE_WIDTH  30
 #define BOX2_WHITE_NOTE_HEIGHT 40
 
+//Valeur du filtre blanc
 #define WHITE_FILTER 0x8888
 
+//positionnement des images
 #define POSITION_IMAGE_1_X 220
 #define POSITION_IMAGE_1_Y 20
 #define POSITION_IMAGE_2_X 15
@@ -109,6 +128,10 @@
 #define IMAGE_SIZE_WIDTH 90
 #define IMAGE_SIZE_HEIGHT 70
 
+//Postion du centre du clavier
+#define OFF_F_INDEX 4
+
+// Définition des offsets multiples pour les 14 notes de musique
 typedef enum ePianoOffstWhite
 {
 	OFF_C = 0,
@@ -150,6 +173,7 @@ U8 colorInc=0;
 U16 colorSwap[4]={BLUE,GREEN,YELLOW,RED};
 U8 *valueconv;
 
+//Matrice pour génération d'une image : Porté avec clé de sol orienté à droite 70x90
 U16 noteD[] = {
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
@@ -223,7 +247,8 @@ U16 noteD[] = {
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
-}; //end array
+};
+//Matrice pour génération d'une image : Porté avec clé de sol orienté à gauche 70x90
 U16 noteG[] = {
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
@@ -297,7 +322,7 @@ U16 noteG[] = {
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
-}; //end array
+};
 
 //Function declaration
 
@@ -340,8 +365,6 @@ void InitControlPanel(void);
  * @arg  N'a besoin d'aucun argument
  * @ret  Retourne rien.
  */
-
-
 
 
 void InitDisplay(void)
@@ -391,30 +414,34 @@ void CleanDrawZone(void)
 }
 
 /*
- * @fn 	 SendTelemetry(U16 x, U16 y, U8 FlagR,U8 FlagL)
- * @des  Envoie les données télémétriques tel que : Lorsqu'un bouton est appuyé et les coordonnées au moment de l'action.
- * @arg  U16 x : Coordonnés en x à envoyer.
- * 		 U16 y : Coordonnés en y à envoyer.
- * 		 U8  FlagR : Permet l'envoie sur le port jtag, lorsque FlagR = 1.
- * 		 U8  FlagL : Permet l'envoie sur le port jtag, lorsque FlagL = 1.
- * @ret  Ne retourne aucune donnée.
+ * @fn 	 UToS(U32 value, U8 size)
+ * @des  Convertie une valeur U32 maximum en tableau de caractère ascii équivalent. On doit spécifiez à la fonction la grandeur maximale du nombre à convertir
+ * @arg  U32 value : nombre U32 à convertir.
+ * 		 U8 size : Grandeur maximale du plus grand nombre à convertir
+ *
+ * @ret  Retourne un pointeur sur un tableau de char contenant le nombre
  */
 U8 *UToS(U32 value,U8 size)
 {
 	U32 tvalue = value;
 	U8 tvalueconv[size+1];
 	S8 i;
-	tvalueconv[size]=0;
+	tvalueconv[size]=0;//insére 0 ou null à la fin du tableau
 	//valueconv = tvalueconv[size];
 	for(i=(size-1);i>=0;i--)
 		{
-			tvalueconv[i]=(tvalue %10)+0x30;
-			tvalue=tvalue/10;
+			tvalueconv[i]=(tvalue %10)+0x30; //conversion ascii
+			tvalue=tvalue/10; //changement de dizaine
 		}
-
-
 return valueconv = tvalueconv;
 }
+/*
+ * @fn 	 DrawPiano(U16 x, U16 y)
+ * @des  Desine à l'écran le un tableau à la position mentionné en x et y. Modifier seulement les defines de positionnement du piano pour déplacer tout les éléments graphiques.
+ * @arg  U16 x : Coordonnés en x0 de la position du piano
+ * 		 U16 y : Coordonnés en y0 de la position du piano. (coin supérieur gauche)
+ * @ret  Ne retourne aucune donnée.
+ */
 void DrawPiano(U16 x, U16 y)
 {
 	S8 i;
@@ -431,25 +458,31 @@ void DrawPiano(U16 x, U16 y)
 		alt_up_pixel_buffer_dma_draw_vline(pixelptr,x+offSetW[i],y,y+WHITE_KEY_HEIGHT,BLACK,0);
 
 }
-
+/*
+ * @fn 	 PlayNote(U8 data,U8 mode)
+ * @des  Sélectionne à l'écran la note joué et affiche à l'écran le caractère de la dernière note affiché
+ * @arg  U8 data : data provenant des touches du clavier.
+ * 		 U8 mode : 2 modes soit : write et clear. Write : Dessine la note passé en argument. Clear: Efface la note passé en argument
+ * @ret  Ne retourne aucune donnée.
+ */
 void PlayNote(U8 data,U8 mode)
 {
 	U8 notePlayedLabelPostionX,notePlayedLabelPostionY;
 	notePlayedLabelPostionX = (PIANO_POSITION_X+offSetW[CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X0]+20)>>X_SHIFT;
 	notePlayedLabelPostionY = (CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+20) >>Y_SHIFT;
-
-	if(data < 8  )
+//Sélectionne la note à jouer ou a effacé au claivier. Supperpose un carré de couleur prédefini.
+	if(data < KB_KEY_DO_D)
 	{
 		if(mode == WRITE)
 		{
 			alt_up_pixel_buffer_dma_draw_box(pixelptr,PIANO_POSITION_X+1+offSetW[data],(PIANO_POSITION_Y+BOX1_WHITE_NOTE_HEIGHT+20),(PIANO_POSITION_X+BOX2_WHITE_NOTE_WIDTH)+offSetW[data],PIANO_POSITION_Y+BOX1_WHITE_NOTE_HEIGHT+BOX2_WHITE_NOTE_HEIGHT,GREEN, 0);
-			alt_up_char_buffer_string(charbuff,&noteChar[data-1][3],notePlayedLabelPostionX,notePlayedLabelPostionY);
+			alt_up_char_buffer_string(charbuff,&noteChar[data-LABEL_OFFSET_TAB_POSITION][NUMBER_OF_CHARACTER],notePlayedLabelPostionX,notePlayedLabelPostionY);
 		}
 		else if(mode == CLEAR)
 			alt_up_pixel_buffer_dma_draw_box(pixelptr,PIANO_POSITION_X+1+offSetW[data],(PIANO_POSITION_Y+BOX1_WHITE_NOTE_HEIGHT+20),(PIANO_POSITION_X+BOX2_WHITE_NOTE_WIDTH)+offSetW[data],PIANO_POSITION_Y+BOX1_WHITE_NOTE_HEIGHT+BOX2_WHITE_NOTE_HEIGHT,WHITE, 0);
 
 	}
-	else if(data > 7 && data < 14)
+	else if(data > KB_KEY_DO2  && data < KB_KEY_SAMPLE)
 	{
 		if(mode == WRITE)
 		{
@@ -463,64 +496,90 @@ void PlayNote(U8 data,U8 mode)
 
 
 }
+/*
+ * @fn 	 void InitControlPanel(void)
+ * @des  Initialise le panneau de contrôle du synthétiseur. Crée 2 images de porté musciale , un panneau d'affichage noir, écrit les chaînes de caractère  : Note joue, Mode et Synthétiseur audio
+ * @arg
+ * @ret  Ne retourne aucune donnée.
+ */
 void InitControlPanel(void)
 {
 	U8 modeLabelPositionX,modeLabelPositionY,notePlayedLabelPostionX,notePlayedLabelPostionY;
 
-	modeLabelPositionX = (PIANO_POSITION_X+offSetW[4]+25)>>X_SHIFT;
+
+	//calcul la position des étiquettes principales du panneau d'affichage
+	modeLabelPositionX = (PIANO_POSITION_X+offSetW[OFF_F_INDEX]+25)>>X_SHIFT;
 	modeLabelPositionY = (CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+7) >>Y_SHIFT;
 
 	notePlayedLabelPostionX = (PIANO_POSITION_X+offSetW[CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X0]+10)>>X_SHIFT;
 	notePlayedLabelPostionY = (CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+7) >>Y_SHIFT;
-
+	//Création de l'interface
 	alt_up_pixel_buffer_dma_draw_box(pixelptr,PIANO_POSITION_X+offSetW[CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X0],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0,(PIANO_POSITION_X+BLACK_KEY_WIDTH)+offSetW[CRTL_PANEL_LABEL_POSITION_PIANO_INDEX_X1],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1,BLACK, 0);
-	alt_up_pixel_buffer_dma_draw_vline(pixelptr,PIANO_POSITION_X+offSetW[4],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+6,CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1,WHITE,0);
+	alt_up_pixel_buffer_dma_draw_vline(pixelptr,PIANO_POSITION_X+offSetW[OFF_F_INDEX],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+6,CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1,WHITE,0);
 
-	alt_up_char_buffer_string(charbuff,CTRL_LABEL, (PIANO_POSITION_X+offSetW[LABEL_PIANO_POSITION_INDEX_X0])>>2, LABEL_PIANO_POSITION_POSITION_Y0 >>2);
+	alt_up_char_buffer_string(charbuff,CTRL_LABEL, (PIANO_POSITION_X+offSetW[LABEL_PIANO_POSITION_INDEX_X0])>>X_SHIFT, LABEL_PIANO_POSITION_POSITION_Y0 >>Y_SHIFT);
+
 	alt_up_char_buffer_string(charbuff,NOTE_LABEL,notePlayedLabelPostionX,notePlayedLabelPostionY);
 	alt_up_char_buffer_string(charbuff,MODE_LABEL, modeLabelPositionX,modeLabelPositionY);
-	alt_up_pixel_buffer_dma_draw_vline(pixelptr,PIANO_POSITION_X+offSetW[4],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+6,CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1,WHITE,0);
+
+	alt_up_pixel_buffer_dma_draw_vline(pixelptr,PIANO_POSITION_X+offSetW[OFF_F_INDEX],CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+6,CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y1,WHITE,0);
 }
+/*
+ * @fn 	 void SelectPianoMode(U8 Data)
+ * @des  Inscrit sur le panneau d'affichage si on est en mode enregistrement ou en mode écoute.
+ * @arg  U8 data : Reçoit les touches du clavier et réagit aux modes Enregistrement et Écoute.
+ * @ret  Ne retourne aucune donnée.
+ */
 void SelectPianoMode(U8 Data)
 {
 	U8 modeLabelPositionX,modeLabelPositionY;
-	modeLabelPositionX = (PIANO_POSITION_X+offSetW[4]+15)>>X_SHIFT;
-	modeLabelPositionY = (CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+20) >>Y_SHIFT;
+	modeLabelPositionX = (PIANO_POSITION_X+offSetW[OFF_F_INDEX]+15)>>X_SHIFT; //Calcule la position de l'affichage des modes en X
+	modeLabelPositionY = (CRTL_PANEL_LABEL_POSITION_PIANO_POSITION_Y0+20) >>Y_SHIFT; //Calcule la position de l'affichage des modes en Y
 
-	if(Data == 14)
+	if(Data == KB_KEY_SAMPLE)
 	{
-		alt_up_char_buffer_string(charbuff,"              ", modeLabelPositionX,modeLabelPositionY);
-		alt_up_char_buffer_string(charbuff,"Enregistrement", modeLabelPositionX,modeLabelPositionY);
+		alt_up_char_buffer_string(charbuff,ERASE_BIGGEST_MODE, modeLabelPositionX,modeLabelPositionY); //Efface le dernier frame
+		alt_up_char_buffer_string(charbuff,RECORDING_MODE, modeLabelPositionX,modeLabelPositionY); //Écrit à l'écran le mode sélectionné par le define
 	}
-	else if(Data == 15)
+	else if(Data == KB_KEY_PLAY)
 	{
-		alt_up_char_buffer_string(charbuff,"              ", modeLabelPositionX,modeLabelPositionY);
-		alt_up_char_buffer_string(charbuff,"Ecoute", modeLabelPositionX,modeLabelPositionY);
+		alt_up_char_buffer_string(charbuff,ERASE_BIGGEST_MODE, modeLabelPositionX,modeLabelPositionY); // Efface le dernie frame
+		alt_up_char_buffer_string(charbuff,PLAY_MODE, modeLabelPositionX,modeLabelPositionY);//Écrit à l'écran le mode sélectionné par le define
 	}
-	else if(Data != 14 && Data != 15)
+	else if(Data != KB_KEY_SAMPLE && Data != KB_KEY_PLAY)
 	{
-		alt_up_char_buffer_string(charbuff,"              ", modeLabelPositionX,modeLabelPositionY);
-		alt_up_char_buffer_string(charbuff,"Clavier", modeLabelPositionX,modeLabelPositionY);
+		alt_up_char_buffer_string(charbuff,ERASE_BIGGEST_MODE, modeLabelPositionX,modeLabelPositionY);
+		alt_up_char_buffer_string(charbuff,KEYBOARD_MODE, modeLabelPositionX,modeLabelPositionY);
 
 	}
 
 }
+/*
+ * @fn 	 DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr)
+ * @des  Dessine une petite image stocker à une adresse spécifique. Scan du de gauche à droite et du haut vers le bas.
+ * @arg  U8 x : Coordonnés en x0 de l'image à afficher.
+ * 		 U8 y : Coordonnés en y0 de l'image à afficher.
+ * 		 U16 height : à déterminer. spécifiez les dimensions de l'image à afficher. Peut être croppé si on le désire
+ * 		 U16 width  : à déterminer. Le positionnement doit être impéccable pour ce paramètre. "sensitive case". Peut déformé l'image ou même les couleurs
+ * 		 U16 *ptr : Pointeur d'adresse pour la lecture du tableau inculant le code rgb pour chaque pixel de l'image.
+ * @ret  Ne retourne aucune donnée.
+ */
 void DrawImage(U8 x,U8 y,U16 height,U16 width,U16 *ptr)
 {
 	U8 i,j;
 	int pos=0;
-	for(i=0;i<height;i++)
+	for(i=0;i<height;i++) //scan à la verticale. Change de ligne après avoir parcouru la largeur (pixel) de l'image à afficher.
 	{
-		for(j=0;j<width;j++)
+		for(j=0;j<width;j++) //scan à l'horizontale
 		{
-			if(ptr[pos]<WHITE_FILTER)
+			if(ptr[pos]<WHITE_FILTER) //Filte de blanc. Saute tout les pixels en dessous de la valeur définie
 			{
-				if(ptr[pos] != BLACK)
+				if(ptr[pos] != BLACK) // à retirer pour autres images... Remplie de noir les pixels différents.
 					ptr[pos]=BLACK;
 
 				alt_up_pixel_buffer_dma_draw(pixelptr, (ptr[pos]), x+j, y+i);
 			}
-			pos++;
+			pos++; //incrémente la position dans le tableau.
 		}
 	}
 }
